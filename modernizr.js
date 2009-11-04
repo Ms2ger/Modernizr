@@ -288,12 +288,13 @@ window.Modernizr = (function(){
 	tests[cssgradients] = function() {
 		/**
 		 * For CSS Gradients syntax, please see:
-		 * http://webkit.org/blog/175/introducing-css-gradients/
+		 * http://webkit.org/blog/175/introducing-css-gradients/ and
+		 * http://dev.w3.org/csswg/css3-images/#gradients-
 		 */
 		
 		var str1 = background + '-image:',
 			str2 = 'gradient(linear,left top,right bottom,from(#9f9),to(white));',
-			str3 = 'linear-gradient(left top,right bottom,from(#9f9),to(white));';
+			str3 = 'linear-gradient(left top, #9f9, white);';
 		
 		set_css(
 				str1 + str2
