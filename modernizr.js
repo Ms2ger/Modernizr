@@ -66,7 +66,7 @@ window.Modernizr = (function(){
 	 *  Modernizr._fontfaceready(fn);
 	 * The callback is passed the boolean value of Modernizr.fontface
 	 */
-	fontfaceCheckDelay = 50,
+	fontfaceCheckDelay = 100,
 	
 	
 	doc = document,
@@ -115,7 +115,12 @@ window.Modernizr = (function(){
 	background = 'background',
 	backgroundColor = background + 'Color',
 	canPlayType = 'canPlayType',
-	
+	localStorage = 'localstorage',
+	webWorkers = 'webworkers',
+	offline = 'offline',
+	inputPlaceholders = 'inputplaceholders',
+	inputAutofocus = 'inputautofocus',
+
 	tests = {},
 	inputs = {},
 	
@@ -243,14 +248,26 @@ window.Modernizr = (function(){
 		return /(url\s*\(.*?){3}/.test(m_style[background]);
 	};
 	
+	
+	// In testing support for a given CSS property, it's legit to test:
+	//    elem.style[styleName] !== undefined
+	// If the property is supported it will return an empty string,
+	// if unsupported it will return undefined.
+	// We'll take advantage of this quick test and skip setting a style 
+	// on our modernizr element, but instead just testing undefined vs
+	// empty string.
+	// The legacy set_css_all calls will remain in the source 
+	// (however, commented) in for clarity, yet functionally they are 
+	// no longer needed.
+	
 	tests[borderimage] = function() {
-		set_css_all( 'border-image:url(m.png) 1 1 stretch' );
+	    //	set_css_all( 'border-image:url(m.png) 1 1 stretch' );
 		
 		return test_props_all( 'borderImage' );
 	};
 	
 	tests[borderradius] = function() {
-		set_css_all( 'border-radius:10px' );
+	    //	set_css_all( 'border-radius:10px' );
 
 		return test_props_all( 'borderRadius', '', function( prop ) {
 			return contains( prop, 'orderRadius' );
@@ -258,7 +275,7 @@ window.Modernizr = (function(){
 	};
 	
 	tests[boxshadow] = function() {
-		set_css_all( 'box-shadow:#000 1px 1px 3px' );
+	    //	set_css_all( 'box-shadow:#000 1px 1px 3px' );
 		
 		return test_props_all( 'boxShadow' );
 	};
@@ -274,13 +291,13 @@ window.Modernizr = (function(){
 	};
 	
 	tests[cssanimations] = function() {
-		set_css_all( 'animation:"animate" 2s ease 2', 'position:relative' );
+	    //	set_css_all( 'animation:"animate" 2s ease 2', 'position:relative' );
 		
 		return test_props_all( 'animationName' );
 	};
 	
 	tests[csscolumns] = function() {
-		set_css_all( 'column-count:3' );
+	    //	set_css_all( 'column-count:3' );
 		
 		return test_props_all( 'columnCount' );
 	};
@@ -288,7 +305,9 @@ window.Modernizr = (function(){
 	tests[cssgradients] = function() {
 		/**
 		 * For CSS Gradients syntax, please see:
-		 * http://webkit.org/blog/175/introducing-css-gradients/ and
+		 * http://webkit.org/blog/175/introducing-css-gradients/
+		 * https://developer.mozilla.org/en/CSS/-moz-linear-gradient
+		 * https://developer.mozilla.org/en/CSS/-moz-radial-gradient
 		 * http://dev.w3.org/csswg/css3-images/#gradients-
 		 */
 		
@@ -313,24 +332,24 @@ window.Modernizr = (function(){
 	};
 	
 	tests[cssreflections] = function() {
-		set_css_all( 'box-reflect:right 1px' );
+	    //	set_css_all( 'box-reflect:right 1px' );
 		return test_props_all( 'boxReflect' );
 	};
 	
 	tests[csstransforms] = function() {
-		set_css_all( 'transform:rotate(3deg)' );
+	    //	set_css_all( 'transform:rotate(3deg)' );
 		
 		return !!test_props([ 'transformProperty', 'webkitTransform', 'MozTransform', 'mozTransform', 'oTransform', 'msTransform' ]);
 	};
 	
 	tests[csstransforms3d] = function() {
-		set_css_all( 'perspective:500' );
+	    //	set_css_all( 'perspective:500' );
 		
 		return !!test_props([ 'perspectiveProperty', 'webkitPerspective', 'MozPerspective', 'mozPerspective', 'oPerspective', 'msPerspective' ]);
 	};
 	
 	tests[csstransitions] = function() {
-		set_css_all( 'transition:all .5s linear' );
+	    //	set_css_all( 'transition:all .5s linear' );
 		
 		return test_props_all( 'transitionProperty' );
 	};
@@ -399,15 +418,68 @@ window.Modernizr = (function(){
     return function(){ return fontret || wid !== spn.offsetWidth; };
   })();
 	
+	
+	// These tests evaluate support of the video/audio elements, as well as
+	// testing what types of content they support.
+	//
+	// we're using the Boolean constructor here, so that we can extend the value
+	// e.g.  Modernizr.video     // true
+	//       Modernizr.video.ogg // 'probably'
+	//
+	// codec values from : http://www.w3.org/TR/html5/video.html#the-source-element
+	//                     http://www.ietf.org/rfc/rfc4281.txt
+	
 	tests[video] = function() {
-		return !!doc.createElement(video)[canPlayType];
+		var elem = doc.createElement(video),
+		    bool = elem[canPlayType];
+		
+		if (bool){  
+		    bool      = new Boolean(bool);  
+		    bool.ogg  = elem[canPlayType]('video/ogg; codecs="theora, vorbis"');
+		    bool.h264 = elem[canPlayType]('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
+		}
+		return bool;
 	};
 	
 	tests[audio] = function() {
-		return !!doc.createElement(audio)[canPlayType];
+		var elem = doc.createElement(audio),
+		    bool = elem[canPlayType];
+		
+		if (bool){  
+		    bool      = new Boolean(bool);  
+		    bool.ogg  = elem[canPlayType]('audio/ogg; codecs="vorbis"');
+		    bool.mp3  = elem[canPlayType]('audio/mpeg3;');
+		    
+		    // mimetypes accepted: 
+		    //   https://developer.mozilla.org/En/Media_formats_supported_by_the_audio_and_video_elements
+		    //   http://developer.apple.com/safari/library/documentation/appleapplications/reference/SafariWebContent/CreatingContentforSafarioniPhone/CreatingContentforSafarioniPhone.html#//apple_ref/doc/uid/TP40006482-SW7
+            bool.wav  = elem[canPlayType]('audio/wav; codecs="1"');
+            bool.m4a  = elem[canPlayType]('audio/x-m4a;');
+        }
+		return bool;
 	};
 
-	
+	tests[localStorage] = function() {
+		return !!window.localStorage;
+	};
+
+	tests[webWorkers] = function () {
+		return !!window.Worker;
+	};
+
+	tests[offline] =  function() {
+		return !!window.applicationCache;
+	};
+
+	tests[inputPlaceholders] = function() {
+		return 'placeholder' in f;
+	};
+
+	tests[inputAutofocus] = function() {
+		return 'autofocus' in f;
+	};
+
+
 	// Run through all tests and detect their support in the current UA.
 	for ( feature in tests ) {
 		if ( tests.hasOwnProperty( feature ) ) {
@@ -415,17 +487,35 @@ window.Modernizr = (function(){
 		}
 	}
 
+    /**
+     * Addtest allows the user to define their own feature tests
+     * the result will be added onto the Modernizr object,
+     * as well as an appropriate className set on the html element
+     * 
+     * @param feature - String naming the feature
+     * @param test - Function returning true if feature is supported, false if not
+     */
+    ret.addTest = function (feature, test) {
+      if (this.hasOwnProperty( feature )) {
+        // warn that feature is already in place
+      } 
+      test = !!(test());
+      docElement.className += ' ' + (!test && enableNoClasses ? 'no-' : '') + feature; 
+      ret[ feature ] = Modernizr[ feature ] = test;
+    };
+
+
 	// Run through HTML5's new input types to see if the UA understands any.
 	//   This is put behind the tests runloop because it doesn't return a
-	//   true/false like all the other tests; instead, it returns an object
-	//   containing each input type with its corresponding true/false value 
-	ret[inputtypes] = function(props) {
+	//   true/false like all the other tests; instead, it returns an array
+	//   containing properties that represent the 'supported' input types.
+	ret[inputtypes] = (function(props) {
 		for ( var i in props ) {
 			f.setAttribute('type', props[i]);
 			inputs[ props[i] ] = !!( f.type !== 'text');
 		}
 		return inputs;
-	}('search tel url email datetime date month week time datetime-local number range color'.split(' '));
+	})('search tel url email datetime date month week time datetime-local number range color'.split(' '));
 
 
 	/**
@@ -441,7 +531,7 @@ window.Modernizr = (function(){
 
 	// Enable HTML 5 elements for styling in IE:
 	if ( enableHTML5 && !(!/*@cc_on!@*/0) ) {
-		elems = 'abbr article aside audio bb canvas datagrid datalist details dialog figure footer header mark menu meter nav output progress section time video'.split(' ');
+		elems = 'abbr article aside audio canvas datalist details eventsource figure footer header hgroup mark menu meter nav output progress section time video'.split(' ');
 
 		i = elems.length+1;
 		while ( --i ) {
